@@ -1,5 +1,7 @@
 # salesforce-delivery-guardrails
 
+[![Testes do sf-guard](https://github.com/jvbeat/salesforce-delivery-guardrails/actions/workflows/tests.yml/badge.svg)](https://github.com/jvbeat/salesforce-delivery-guardrails/actions/workflows/tests.yml)
+
 Travas que uso na entrega de projetos Salesforce para que regras de plataforma já conhecidas sejam conferidas por máquina no momento do comando, e não dependam da memória de quem executa. Nenhum arquivo deste repositório contém código, metadado ou dado de cliente.
 
 ## Hook do Claude Code para o Salesforce CLI
