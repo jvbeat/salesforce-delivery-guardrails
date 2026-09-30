@@ -1,0 +1,7 @@
+# Configuração do Code Analyzer usada pelo workflow (copiar para .github/code-analyzer-ci.yml).
+# Código gerado por terceiros e empacotado no projeto fica fora do scan, para que
+# a contagem de violações reflita o código do time.
+ignores:
+  files:
+    - "**/staticresources/**/*.min.js"
+    - "**/staticresources/**/*.min.css"

@@ -1,0 +1,94 @@
+name: Salesforce Code Analyzer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "force-app/**"
+      - ".github/workflows/code-analyzer.yml"
+      - ".github/code-analyzer-ci.yml"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Os engines do Code Analyzer v5 têm pré-requisitos próprios: node para
+      # todos, java para pmd e cpd, python para flowtest. O sf CLI 2.148+ declara
+      # engines.node >=22; com Node 20 o undici de dentro do jsforce quebra em
+      # markAsUncloneable e o CLI nem sobe.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Se o eslint.config.js do projeto faz require('eslint/config'), o engine de
+      # eslint do Code Analyzer carrega esse arquivo. Sem as devDependencies
+      # instaladas o engine cai com UninstantiableEngineError, que entra como
+      # Critical e derruba o gate por motivo ambiental.
+      - name: Instala as dependências do projeto (eslint e plugins)
+        if: hashFiles('package.json') != ''
+        run: npm install --no-audit --no-fund
+
+      - name: Instala sf CLI e o plugin code-analyzer
+        run: |
+          npm install --global @salesforce/cli
+          sf plugins install code-analyzer@latest
+          # code-analyzer é um topic, não um comando: "sf code-analyzer --version"
+          # sai com 127. A confirmação de que o plugin subiu é o sf plugins.
+          sf plugins | grep code-analyzer
+
+      - name: Roda o Code Analyzer
+        id: analyzer
+        uses: forcedotcom/run-code-analyzer@v2
+        with:
+          run-arguments: --config-file .github/code-analyzer-ci.yml --workspace force-app --view detail --output-file sfca_results.json --output-file sfca_results.html
+          results-artifact-name: code-analyzer-results
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Barra Critical em qualquer arquivo e High novo nos arquivos alterados do PR.
+      # Dívida antiga não trava entrega, e código novo não entra com violação grave.
+      - name: Gate de severidade
+        run: |
+          echo "Total: ${{ steps.analyzer.outputs.num-violations }} violações"
+          echo "  Critical: ${{ steps.analyzer.outputs.num-sev1-violations }}"
+          echo "  High:     ${{ steps.analyzer.outputs.num-sev2-violations }}"
+
+          CRITICAL="${{ steps.analyzer.outputs.num-sev1-violations }}"
+          if [ -n "$CRITICAL" ] && [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Critical encontrado. Corrigir antes de seguir."
+            exit 1
+          fi
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            NOVOS_HIGH="${{ steps.analyzer.outputs.num-sev2-violations-in-changed-files }}"
+            echo "  High nos arquivos alterados: $NOVOS_HIGH"
+            if [ -n "$NOVOS_HIGH" ] && [ "$NOVOS_HIGH" -gt 0 ]; then
+              echo "::error::High em arquivo alterado neste PR. Corrigir ou justificar."
+              exit 1
+            fi
+          fi
+
+          echo "Sem Critical e sem High novo. Segue."

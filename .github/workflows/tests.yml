@@ -1,0 +1,17 @@
+name: Testes do sf-guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Executa os testes do hook
+        run: python -m unittest discover -s claude-code -p 'test_*.py' -v
