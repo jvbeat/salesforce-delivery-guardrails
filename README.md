@@ -1,6 +1,6 @@
 # salesforce-delivery-guardrails
 
-[![Tests](https://github.com/jvbeat/salesforce-delivery-guardrails/actions/workflows/tests.yml/badge.svg)](https://github.com/jvbeat/salesforce-delivery-guardrails/actions/workflows/tests.yml)
+[![Tests](https://github.com/jvbeat/salesforce-delivery-guardrails/actions/workflows/tests.yml/badge.svg)](https://github.com/jvbeat/salesforce-delivery-guardrails/actions/workflows/tests.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Guardrails I use when delivering Salesforce projects with AI agents, so that known platform pitfalls are checked by a machine at command time instead of depending on someone's memory. Nothing in this repository contains client code, metadata or data.
 
