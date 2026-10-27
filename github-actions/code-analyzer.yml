@@ -24,10 +24,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Os engines do Code Analyzer v5 têm pré-requisitos próprios: node para
-      # todos, java para pmd e cpd, python para flowtest. O sf CLI 2.148+ declara
-      # engines.node >=22; com Node 20 o undici de dentro do jsforce quebra em
-      # markAsUncloneable e o CLI nem sobe.
+      # Code Analyzer v5 engines have their own prerequisites: node for all of
+      # them, java for pmd and cpd, python for flowtest. sf CLI 2.148+ declares
+      # engines.node >=22; on Node 20 the undici bundled in jsforce breaks on
+      # markAsUncloneable and the CLI does not start.
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -44,23 +44,23 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Se o eslint.config.js do projeto faz require('eslint/config'), o engine de
-      # eslint do Code Analyzer carrega esse arquivo. Sem as devDependencies
-      # instaladas o engine cai com UninstantiableEngineError, que entra como
-      # Critical e derruba o gate por motivo ambiental.
-      - name: Instala as dependências do projeto (eslint e plugins)
+      # If the project's eslint.config.js requires 'eslint/config', the Code
+      # Analyzer eslint engine loads that file. Without the devDependencies the
+      # engine fails with UninstantiableEngineError, which counts as Critical and
+      # fails the gate for an environmental reason.
+      - name: Install project dependencies (eslint and plugins)
         if: hashFiles('package.json') != ''
         run: npm install --no-audit --no-fund
 
-      - name: Instala sf CLI e o plugin code-analyzer
+      - name: Install sf CLI and the code-analyzer plugin
         run: |
           npm install --global @salesforce/cli
           sf plugins install code-analyzer@latest
-          # code-analyzer é um topic, não um comando: "sf code-analyzer --version"
-          # sai com 127. A confirmação de que o plugin subiu é o sf plugins.
+          # code-analyzer is a topic, not a command: "sf code-analyzer --version"
+          # exits with 127. sf plugins confirms the plugin is installed.
           sf plugins | grep code-analyzer
 
-      - name: Roda o Code Analyzer
+      - name: Run Code Analyzer
         id: analyzer
         uses: forcedotcom/run-code-analyzer@v2
         with:
@@ -68,27 +68,27 @@ jobs:
           results-artifact-name: code-analyzer-results
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Barra Critical em qualquer arquivo e High novo nos arquivos alterados do PR.
-      # Dívida antiga não trava entrega, e código novo não entra com violação grave.
-      - name: Gate de severidade
+      # Fails on Critical in any file and on new High in the files the PR changed.
+      # Old debt does not block delivery, and new code does not ship with a serious violation.
+      - name: Severity gate
         run: |
-          echo "Total: ${{ steps.analyzer.outputs.num-violations }} violações"
+          echo "Total: ${{ steps.analyzer.outputs.num-violations }} violations"
           echo "  Critical: ${{ steps.analyzer.outputs.num-sev1-violations }}"
           echo "  High:     ${{ steps.analyzer.outputs.num-sev2-violations }}"
 
           CRITICAL="${{ steps.analyzer.outputs.num-sev1-violations }}"
           if [ -n "$CRITICAL" ] && [ "$CRITICAL" -gt 0 ]; then
-            echo "::error::Critical encontrado. Corrigir antes de seguir."
+            echo "::error::Critical violation found. Fix it before merging."
             exit 1
           fi
 
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            NOVOS_HIGH="${{ steps.analyzer.outputs.num-sev2-violations-in-changed-files }}"
-            echo "  High nos arquivos alterados: $NOVOS_HIGH"
-            if [ -n "$NOVOS_HIGH" ] && [ "$NOVOS_HIGH" -gt 0 ]; then
-              echo "::error::High em arquivo alterado neste PR. Corrigir ou justificar."
+            NEW_HIGH="${{ steps.analyzer.outputs.num-sev2-violations-in-changed-files }}"
+            echo "  High in changed files: $NEW_HIGH"
+            if [ -n "$NEW_HIGH" ] && [ "$NEW_HIGH" -gt 0 ]; then
+              echo "::error::High violation in a file changed by this PR. Fix it or justify it."
               exit 1
             fi
           fi
 
-          echo "Sem Critical e sem High novo. Segue."
+          echo "No Critical and no new High. Passing."

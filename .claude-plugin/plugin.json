@@ -1,0 +1,13 @@
+{
+  "name": "salesforce-delivery-guardrails",
+  "description": "Blocks Salesforce CLI commands without an explicit target org and reminds the agent of deploy pitfalls (permission set assignment, Flow activation, FLS, rollback).",
+  "version": "1.0.0",
+  "author": {
+    "name": "João Victor Beato",
+    "url": "https://github.com/jvbeat"
+  },
+  "homepage": "https://github.com/jvbeat/salesforce-delivery-guardrails",
+  "repository": "https://github.com/jvbeat/salesforce-delivery-guardrails",
+  "license": "MIT",
+  "keywords": ["salesforce", "sfdx", "salesforce-cli", "guardrails", "hooks", "deploy"]
+}
