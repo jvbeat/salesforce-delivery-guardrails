@@ -15,7 +15,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|mcp__.*__deploy_metadata",
         "hooks": [
           {
             "type": "command",

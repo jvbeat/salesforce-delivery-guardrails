@@ -8,8 +8,8 @@ from pathlib import Path
 HOOK = Path(__file__).with_name('sf-guard.py')
 
 
-def run(event, command):
-    payload = {'hook_event_name': event, 'tool_name': 'Bash', 'tool_input': {'command': command}}
+def run(event, command, tool='Bash', tool_input=None):
+    payload = {'hook_event_name': event, 'tool_name': tool, 'tool_input': tool_input or {'command': command}}
     out = subprocess.run([sys.executable, str(HOOK)], input=json.dumps(payload),
                          capture_output=True, text=True, check=True).stdout.strip()
     return json.loads(out)['hookSpecificOutput'] if out else None
@@ -49,6 +49,25 @@ class PostToolUse(unittest.TestCase):
     def test_reminds_fls_after_describe(self):
         result = run('PostToolUse', 'sf sobject describe --sobject Account -o uat')
         self.assertIn('FieldDefinition', result['additionalContext'])
+
+    def test_reminds_windows_after_layout_deploy(self):
+        result = run('PostToolUse', 'sf project deploy start -m Layout:Account-Account_Layout -o uat')
+        self.assertIn('create, edit and clone windows', result['additionalContext'])
+
+
+class McpDeploy(unittest.TestCase):
+    def test_reminds_windows_after_mcp_deploy_of_a_page(self):
+        args = {'sourceDir': ['force-app/main/default/flexipages/Account_Record_Page.flexipage-meta.xml']}
+        result = run('PostToolUse', None, tool='mcp__salesforce__deploy_metadata', tool_input=args)
+        self.assertIn('create, edit and clone windows', result['additionalContext'])
+
+    def test_any_server_name_is_recognized(self):
+        args = {'sourceDir': ['force-app/main/default/layouts']}
+        self.assertIsNotNone(run('PostToolUse', None, tool='mcp__my-sf__deploy_metadata', tool_input=args))
+
+    def test_silent_for_mcp_deploy_without_pages_or_layouts(self):
+        args = {'sourceDir': ['force-app/main/default/classes']}
+        self.assertIsNone(run('PostToolUse', None, tool='mcp__salesforce__deploy_metadata', tool_input=args))
 
 
 if __name__ == '__main__':

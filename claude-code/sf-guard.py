@@ -11,11 +11,20 @@ without an explicit target lands there.
 
 PostToolUse: after a deploy or a describe, returns the reminder that matches what
 went up (a permission set is not assigned by deploying it, a Flow deploys as Draft,
-a new field deploys without FLS, describe is filtered by the session user's FLS).
+a new field deploys without FLS, describe is filtered by the session user's FLS, and
+a page, layout, quick action or validation rule changes the create and edit windows).
+It covers `sf project deploy` in Bash and the deploy_metadata tool of the Salesforce DX
+MCP server, whatever name the server was given.
 """
 import json
 import re
 import sys
+
+WINDOWS = re.compile(r'flexipages?|FlexiPage|\blayouts?\b|\bLayout\b|quickActions?|QuickAction|validationRules?|ValidationRule')
+WINDOWS_REMINDER = ('A page, layout, quick action or validation rule went up: the create, edit and clone windows change. '
+                    'A Lightning page with field sections and no record detail builds those windows from its own sections, '
+                    'not from the page layout. Open the create and edit windows of every object you touched before calling it done.')
+MCP_DEPLOY = re.compile(r'^mcp__.+__deploy_metadata$')
 
 NEEDS_TARGET = re.compile(r'\bsf\s+(project\s+(deploy|retrieve)|apex\s+(run|test)|org\s+assign|data\s+\w+|sobject\s+describe)\b')
 HAS_TARGET = re.compile(r'(^|\s)(-o|--target-org)(\s|=)')
@@ -26,10 +35,18 @@ def main():
         payload = json.load(sys.stdin)
     except Exception:
         return 0
+    event = payload.get('hook_event_name', '')
+    if MCP_DEPLOY.match(payload.get('tool_name') or ''):
+        if event == 'PostToolUse':
+            args = payload.get('tool_input') or {}
+            target = ' '.join(args.get('sourceDir') or []) + ' ' + (args.get('manifest') or '')
+            if WINDOWS.search(target):
+                print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PostToolUse',
+                                  'additionalContext': 'sf guard: ' + WINDOWS_REMINDER}}))
+        return 0
     if payload.get('tool_name') != 'Bash':
         return 0
     cmd = (payload.get('tool_input') or {}).get('command', '') or ''
-    event = payload.get('hook_event_name', '')
     if not re.search(r'\bsf\s', cmd):
         return 0
 
@@ -50,6 +67,8 @@ def main():
                 reminders.append('A deployed Flow lands as Draft and the previous version stays active: activate it through FlowDefinition (activeVersionNumber).')
             if re.search(r'\bfields?\b|CustomField|objects/', cmd):
                 reminders.append('A new field deploys without FLS: it exists, sits on the layout and does not show. Grant FLS in a permission set and assign it.')
+            if WINDOWS.search(cmd):
+                reminders.append(WINDOWS_REMINDER)
             reminders.append('A failed deploy rolls back the whole batch: check what is in the org with a retrieve, not with the log.')
         if re.search(r'sf\s+sobject\s+describe', cmd):
             reminders.append("Describe answers with the session user's FLS: a field missing here is not proof it does not exist. Confirm through the Tooling API on FieldDefinition.")

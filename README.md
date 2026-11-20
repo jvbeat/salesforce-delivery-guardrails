@@ -24,6 +24,9 @@ After a deploy or a describe, the guard hands the agent the reminder that matche
 - A new field deploys without FLS and does not show on the page.
 - A failed deploy rolls back the whole batch, so the check is a retrieve, not the log.
 - Describe answers with the session user's FLS, so a missing field there does not prove the field is missing.
+- A Lightning page, layout, quick action or validation rule changes the create, edit and clone windows, and a page with field sections builds those windows from its own sections, not from the layout.
+
+The reminders also follow deploys made through the `deploy_metadata` tool of the Salesforce DX MCP server, whatever name the server has in your configuration.
 
 The tests run the hook the same way Claude Code does:
 
@@ -56,7 +59,7 @@ Travas que uso na entrega de projetos Salesforce com agentes de IA, para que arm
 
 Para instalar como plugin do Claude Code, use os dois comandos da seção "Install as a Claude Code plugin". O plugin registra o guard do `sf` como hook antes e depois de cada comando Bash.
 
-Antes de um comando `sf`, o guard bloqueia deploy, retrieve, execução e teste de Apex, atribuição de permission set, operação de dados e describe sem `--target-org`. Quem atende vários clientes costuma ter a org padrão global apontando para outro cliente, e um comando sem alvo explícito cai nela. Depois de um deploy ou de um describe, o guard devolve ao agente o lembrete da armadilha correspondente: permission set sobe sem ser atribuído, Flow sobe em Draft, campo novo sobe sem FLS, deploy com falha reverte o lote inteiro e describe responde pelo FLS do usuário da sessão.
+Antes de um comando `sf`, o guard bloqueia deploy, retrieve, execução e teste de Apex, atribuição de permission set, operação de dados e describe sem `--target-org`. Quem atende vários clientes costuma ter a org padrão global apontando para outro cliente, e um comando sem alvo explícito cai nela. Depois de um deploy ou de um describe, o guard devolve ao agente o lembrete da armadilha correspondente: permission set sobe sem ser atribuído, Flow sobe em Draft, campo novo sobe sem FLS, deploy com falha reverte o lote inteiro e describe responde pelo FLS do usuário da sessão. Página, layout, ação rápida e regra de validação mudam as janelas de criar, editar e clonar, e o guard também lembra disso. Os lembretes valem ainda para o deploy feito pela ferramenta `deploy_metadata` do servidor MCP do Salesforce DX.
 
 O workflow do Code Analyzer barra violação crítica em qualquer arquivo e violação alta nova nos arquivos alterados do pull request. Antes de cada entrega, o scan local inclui as regras de segurança do Graph Engine, que o seletor `Recommended` não traz.
 
