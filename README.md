@@ -52,6 +52,30 @@ sf code-analyzer run --workspace ./force-app --target <changed files> --rule-sel
 
 `--workspace` takes the whole project because the Graph Engine builds the call graph from it, and `--target` limits the results to the changed files.
 
+## Custom rules: declared access mode
+
+From API version 67.0, an Apex database operation without a declared access mode runs in user mode and enforces the running user's object and field permissions. Up to API version 66.0, the default is system mode. A trigger, scheduled job or batch that reads a field the running user cannot see then fails, and when a trigger handler catches the exception, nothing shows on screen. In client projects, failures like these went unnoticed for days, once for a month, because everyone who tested was an administrator.
+
+[declared-access-mode.xml](code-analyzer-rules/declared-access-mode.xml) adds two PMD rules to Code Analyzer:
+
+- `SoqlWithoutAccessMode` flags static SOQL without `WITH SYSTEM_MODE`, `WITH USER_MODE` or `WITH SECURITY_ENFORCED`.
+- `DatabaseCallWithoutAccessLevel` flags `Database.insert`, `update`, `upsert`, `delete`, `undelete`, `merge`, `query`, `countQuery` and `getQueryLocator` without `AccessLevel`, unless the query text itself carries the mode.
+
+Both skip test classes and test data factories (class name containing `TestFactory`). They only check that a mode is declared; the choice stays with the developer: system mode for automation, user mode for screen controllers. Keyword DML (`insert`, `update`) is not checked, because the PMD tree does not tell `insert as system` from a plain `insert`.
+
+To use them in a project, copy the file to `config/code-analyzer-rules/` and reference it in `code-analyzer.yml` at the project root, for the local scan, and in `.github/code-analyzer-ci.yml`, for the workflow, where [code-analyzer-ci.yml](github-actions/code-analyzer-ci.yml) has the block ready to uncomment:
+
+```yaml
+engines:
+  pmd:
+    custom_rulesets:
+      - "config/code-analyzer-rules/declared-access-mode.xml"
+```
+
+The rules ship with severity 3 (Moderate), so they report without blocking. Measure the existing violations, declare the mode in those classes, and then change `<priority>` to 2 (High), so the gate blocks a new violation in the files a pull request changes. Changing an API 67 class to system mode changes its behavior for users without field access, which is the point; on API 66 and earlier the declaration only makes the existing behavior explicit.
+
+The [fixtures](code-analyzer-rules/test/fixtures) prove each rule with flagged and clean examples, and the `regras` job in the test workflow runs them on every change.
+
 <details>
 <summary>Em português</summary>
 
@@ -62,5 +86,7 @@ Para instalar como plugin do Claude Code, use os dois comandos da seção "Insta
 Antes de um comando `sf`, o guard bloqueia deploy, retrieve, execução e teste de Apex, atribuição de permission set, operação de dados e describe sem `--target-org`. Quem atende vários clientes costuma ter a org padrão global apontando para outro cliente, e um comando sem alvo explícito cai nela. Depois de um deploy ou de um describe, o guard devolve ao agente o lembrete da armadilha correspondente: permission set sobe sem ser atribuído, Flow sobe em Draft, campo novo sobe sem FLS, deploy com falha reverte o lote inteiro e describe responde pelo FLS do usuário da sessão. Página, layout, ação rápida e regra de validação mudam as janelas de criar, editar e clonar, e o guard também lembra disso. Os lembretes valem ainda para o deploy feito pela ferramenta `deploy_metadata` do servidor MCP do Salesforce DX.
 
 O workflow do Code Analyzer barra violação crítica em qualquer arquivo e violação alta nova nos arquivos alterados do pull request. Antes de cada entrega, o scan local inclui as regras de segurança do Graph Engine, que o seletor `Recommended` não traz.
+
+As regras próprias de modo declarado acusam consulta SOQL e chamada `Database` sem modo de acesso. A partir da API 67, a operação sem modo declarado executa em modo de usuário, e a automação falha calada para quem não lê o campo. As regras saem com severidade Moderate: o projeto mede as violações, declara o modo nas classes acusadas e só então sobe a severidade para High.
 
 </details>

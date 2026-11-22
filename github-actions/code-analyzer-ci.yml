@@ -5,3 +5,12 @@ ignores:
   files:
     - "**/staticresources/**/*.min.js"
     - "**/staticresources/**/*.min.css"
+
+# Declared access mode rules (see the README). Copy code-analyzer-rules/declared-access-mode.xml
+# to config/code-analyzer-rules/ in the project and uncomment the block below. Keep the path
+# relative to the repository root: in CI the plugin hands it to PMD without resolving it from
+# this file's folder.
+# engines:
+#   pmd:
+#     custom_rulesets:
+#       - "config/code-analyzer-rules/declared-access-mode.xml"

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="DeclaredAccessMode"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Apex database operations must declare their access mode. From API version 67.0 an operation
+        without a declared mode runs in user mode, so automation fails silently for a running user
+        without field access; up to API version 66.0 the default is system mode. Declaring the mode
+        keeps the behavior explicit across API versions. Test classes and test data factories
+        (class name containing "TestFactory") are not checked.
+    </description>
+
+    <rule name="SoqlWithoutAccessMode"
+          language="apex"
+          message="SOQL query without a declared access mode. Use WITH SYSTEM_MODE in automation (trigger, event, job) and WITH USER_MODE in screen controllers."
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <description>Flags static SOQL without WITH SYSTEM_MODE, WITH USER_MODE or WITH SECURITY_ENFORCED.</description>
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+//SoqlExpression[not(matches(@Query, 'WITH\s+(SYSTEM_MODE|USER_MODE|SECURITY_ENFORCED)', 'i'))][not(ancestor::UserClass[ModifierNode[@Test = true()]])][not(ancestor::UserClass[contains(@SimpleName, 'TestFactory')])]
+]]></value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="DatabaseCallWithoutAccessLevel"
+          language="apex"
+          message="Database method without AccessLevel. Pass AccessLevel.SYSTEM_MODE in automation (trigger, event, job) and AccessLevel.USER_MODE in screen controllers."
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <description>Flags Database.insert, update, upsert, delete, undelete, merge, query, countQuery and getQueryLocator without an AccessLevel argument. A call that receives static SOQL is left to SoqlWithoutAccessMode, and a dynamic query whose text literal carries WITH SYSTEM_MODE or WITH USER_MODE is accepted. Keyword DML (insert, update) is not checked, because the PMD tree does not tell "insert as system" from a plain insert.</description>
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+//MethodCallExpression[@FullMethodName = ('Database.insert','Database.update','Database.upsert','Database.delete','Database.undelete','Database.merge','Database.query','Database.countQuery','Database.getQueryLocator')][not(.//ReferenceExpression[@Image='AccessLevel'])][not(SoqlExpression)][not(.//LiteralExpression[@LiteralType='STRING'][matches(@Image, 'WITH\s+(SYSTEM_MODE|USER_MODE)', 'i')])][not(ancestor::UserClass[ModifierNode[@Test = true()]])][not(ancestor::UserClass[contains(@SimpleName, 'TestFactory')])]
+]]></value>
+            </property>
+        </properties>
+    </rule>
+</ruleset>
