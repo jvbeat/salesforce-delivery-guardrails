@@ -72,7 +72,9 @@ engines:
       - "config/code-analyzer-rules/declared-access-mode.xml"
 ```
 
-The rules ship with severity 3 (Moderate), so they report without blocking. Measure the existing violations, declare the mode in those classes, and then change `<priority>` to 2 (High), so the gate blocks a new violation in the files a pull request changes. Changing an API 67 class to system mode changes its behavior for users without field access, which is the point; on API 66 and earlier the declaration only makes the existing behavior explicit.
+The rules ship with severity 3 (Moderate), so they report without blocking. Measure the existing violations, declare the mode in those classes, and then change `<priority>` to 1, which Code Analyzer reports as severity 2 (High), so the gate blocks a new violation in the files a pull request changes. Changing an API 67 class to system mode changes its behavior for users without field access, which is the point; on API 66 and earlier the declaration only makes the existing behavior explicit.
+
+Code Analyzer maps PMD priority to its own severity: priority 1 becomes High, 2 and 3 become Moderate, and 4 and 5 become Low. A custom PMD rule cannot reach Critical, and priority 2 still reports as Moderate, so it never blocks.
 
 The [fixtures](code-analyzer-rules/test/fixtures) prove each rule with flagged and clean examples, and the `regras` job in the test workflow runs them on every change.
 
@@ -87,6 +89,6 @@ Antes de um comando `sf`, o guard bloqueia deploy, retrieve, execução e teste 
 
 O workflow do Code Analyzer barra violação crítica em qualquer arquivo e violação alta nova nos arquivos alterados do pull request. Antes de cada entrega, o scan local inclui as regras de segurança do Graph Engine, que o seletor `Recommended` não traz.
 
-As regras próprias de modo declarado acusam consulta SOQL e chamada `Database` sem modo de acesso. A partir da API 67, a operação sem modo declarado executa em modo de usuário, e a automação falha calada para quem não lê o campo. As regras saem com severidade Moderate: o projeto mede as violações, declara o modo nas classes acusadas e só então sobe a severidade para High.
+As regras próprias de modo declarado acusam consulta SOQL e chamada `Database` sem modo de acesso. A partir da API 67, a operação sem modo declarado executa em modo de usuário, e a automação falha calada para quem não lê o campo. As regras saem com severidade Moderate: o projeto mede as violações, declara o modo nas classes acusadas e só então sobe a severidade para High, com a `<priority>1</priority>`. A prioridade 2 continua aparecendo como Moderate e não barra nada.
 
 </details>
