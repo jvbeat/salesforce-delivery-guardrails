@@ -54,6 +54,12 @@ class DeclaredAccessModeTest(unittest.TestCase):
         errors = [v for v in self.violations if v['rule'] not in RULES]
         self.assertEqual(errors, [], 'the ruleset did not load cleanly')
 
+    def test_shipped_severity_is_moderate(self):
+        # PMD priority 3 is reported as severity 3 (Moderate). Priority 1 is the only
+        # value that reaches High (severity 2); priority 2 is still Moderate.
+        severities = {v['severity'] for v in self.violations if v['rule'] in RULES}
+        self.assertEqual(severities, {3})
+
     def test_counts_per_fixture(self):
         found = Counter((os.path.basename(v['locations'][0]['file']), v['rule'])
                         for v in self.violations)
